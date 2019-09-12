@@ -12,7 +12,6 @@ import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Environment;
-import android.util.LruCache;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -21,6 +20,12 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.yiuhet.camerademo.LogUtil;
 import com.yiuhet.camerademo.R;
@@ -32,12 +37,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-
 import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE;
 import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
 
@@ -46,12 +45,13 @@ import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
  * Created by yiuhet on 2019/6/24.
  */
 public class CameraActivity extends AppCompatActivity implements Camera.PreviewCallback, View.OnClickListener {
-    LruCache
+    private static final double DEFAULT_ASPECT_RATIO = 16 / 9.0; //默认预览尺寸比例
     private String[] REQUIRED_PERMISSIONS = new String[]{Manifest.permission.CAMERA};
     private final int REQUEST_CODE_PERMISSIONS = 10;
 
     private int mCameraId; //相机ID
     private Camera mCamera;//相机实例
+    private double mAspectRatio = DEFAULT_ASPECT_RATIO; //预览纵横比
     private MediaRecorder mMediaRecorder; //录屏实例
     private boolean isRecording = false;//是否在录屏
 
@@ -133,9 +133,8 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
     }
 
     private boolean allPermissionsGranted() {
-        Arrays.asList(REQUIRED_PERMISSIONS).stream()
+        return Arrays.asList(REQUIRED_PERMISSIONS).stream()
                 .allMatch(s -> ContextCompat.checkSelfPermission(getBaseContext(), s) == PackageManager.PERMISSION_GRANTED);
-        return true;
     }
 
     @Override
@@ -158,11 +157,13 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
      * @return
      */
     private boolean startCamera() {
+        //相机权限申请
         if (!allPermissionsGranted()) {
             ActivityCompat.requestPermissions(
                     this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
             return false;
         }
+        //检测相机能力
         int cameraNumber = Camera.getNumberOfCameras();
         LogUtil.e("yiuhet", "cameraNumber : " + cameraNumber);
         //没有摄像头
@@ -170,16 +171,17 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
             return false;
         }
         //相机数量为2则打开1,1则打开0,相机ID 1为前置，0为后置
-        mCameraId = Camera.getNumberOfCameras() - 2;
+        mCameraId = Camera.getNumberOfCameras();
         if (mCamera == null) {
             try {
-                mCamera = Camera.open(mCameraId);
+                mCamera = Camera.open();
             } catch (Exception e) {
+                //Camera is not available (in use or does not exist)
                 LogUtil.e("yiuhet", "open camera error : " + e);
                 return false;
             }
         }
-        initCameraParams(mCamera, 16 / 9f);
+        initCameraParams(mCamera, mAspectRatio);
         try {
             if (mPreviewDisplayView instanceof TextureView) {
                 mCamera.setPreviewTexture(((TextureView) mPreviewDisplayView).getSurfaceTexture());
@@ -200,10 +202,11 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
      * 设置相机参数
      *
      * @param camera
+     * @param ratio
      */
-    private void initCameraParams(Camera camera, float ratio) {
+    private void initCameraParams(Camera camera, double ratio) {
         //设置角度 只对预览视图有效
-        int displayOrientation = getCameraOri();
+        int displayOrientation = getCameraOrientation();
         camera.setDisplayOrientation(displayOrientation);
         Camera.Parameters parameters = camera.getParameters();
         LogUtil.e("yiuhet", "parameters ：\n" + parameters.flatten().replaceAll(";", ";\n"));
@@ -233,7 +236,7 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
      * @param previewViewRatio 高宽比
      * @return
      */
-    private Camera.Size chooseOptimalSize(List<Camera.Size> sizes, float previewViewRatio) {
+    private Camera.Size chooseOptimalSize(List<Camera.Size> sizes, double previewViewRatio) {
         if (sizes == null || sizes.size() == 0) {
             return mCamera.getParameters().getPreviewSize();
         }
@@ -257,7 +260,7 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
      *
      * @return
      */
-    private int getCameraOri() {
+    private int getCameraOrientation() {
         int degrees = 0;
         //手机方向
         int phoneRotate = getWindowManager().getDefaultDisplay().getOrientation();
@@ -283,7 +286,7 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
         LogUtil.e("yiuhet", "facing:" + info.facing + ", orientation:" + info.orientation + ", canDisableShutterSound:" + info.canDisableShutterSound);
         if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
             result = (info.orientation + degrees) % 360;
-            result = (360 - result) % 360; //镜像 水平反翻转
+            result = (360 - result) % 360; //镜像 水平翻转
         } else {
             result = (info.orientation - degrees + 360) % 360;
         }

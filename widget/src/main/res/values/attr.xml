@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="NumberKeyboard">
+        <attr name="keyPadding" format="dimension" />
+        <attr name="keyWidth" format="dimension" />
+        <attr name="keyHeight" format="dimension" />
+        <attr name="keyTextSize" format="dimension" />
+    </declare-styleable>
+</resources>

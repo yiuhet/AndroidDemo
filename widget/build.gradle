@@ -4,7 +4,6 @@ android {
     compileSdkVersion 28
 
 
-
     defaultConfig {
         applicationId "com.yiuhet.widget"
         minSdkVersion 23
@@ -14,13 +13,25 @@ android {
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
+        signingConfigs {
+            sign {
+                keyAlias 'Sunmi'
+                keyPassword 'sunmi388'
+                storeFile file('../app/sunmi.keystore')
+                storePassword 'sunmi388'
+            }
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.sign
         }
+    }
+    compileOptions {
+        targetCompatibility = '1.8'
     }
 
 }
@@ -30,7 +41,12 @@ dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.0.0-alpha1'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.2'
+    implementation 'com.android.support:recyclerview-v7:28.0.0-alpha1'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test:runner:1.1.0-alpha3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.0-alpha3'
+    implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+    implementation 'com.liulishuo.okdownload:okdownload:1.0.5'
+    implementation 'com.liulishuo.okdownload:sqlite:1.0.5'
+    implementation 'com.liulishuo.okdownload:okhttp:1.0.5'
 }

@@ -7,6 +7,7 @@
     <uses-feature android:name="android.hardware.camera" />
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
@@ -17,14 +18,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".camerax.KtCameraXActivity">
-
-        </activity>
-        <activity android:name=".camera2.Camera2Activity"></activity>
+        <activity android:name=".camerax.KtCameraXActivity"></activity>
+        <activity android:name=".camera2.Camera2Activity" />
         <activity
             android:name=".camera.CameraActivity"
             android:configChanges="orientation" />
         <activity android:name=".camerax.CameraXActivit">
+
+        </activity>
+        <activity android:name=".fotoapparat.FotoCameraActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
