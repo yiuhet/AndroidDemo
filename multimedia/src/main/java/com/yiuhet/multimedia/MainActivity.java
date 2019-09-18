@@ -19,8 +19,6 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import javax.net.ssl.HttpsURLConnection;
-
 
 public class MainActivity extends Activity {
 
@@ -37,14 +35,14 @@ public class MainActivity extends Activity {
         mTest.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                startActivity(new Intent(MainActivity.this, AudioActivity.class));
-                ThreadPoolUtils.executeInCachePool(new Runnable() {
-                    @Override
-                    public void run() {
-                        Bitmap bitmap = getImageBitmap("http://pic1.win4000.com/wallpaper/c/53cdd1f7c1f21.jpg");
-                        runOnUiThread(() -> mImage.setImageBitmap(bitmap));
-                    }
-                });
+                startActivity(new Intent(MainActivity.this, AudioActivity.class));
+//                ThreadPoolUtils.executeInCachePool(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        Bitmap bitmap = getImageBitmap("http://pic1.win4000.com/wallpaper/c/53cdd1f7c1f21.jpg");
+//                        runOnUiThread(() -> mImage.setImageBitmap(bitmap));
+//                    }
+//                });
             }
         });
 

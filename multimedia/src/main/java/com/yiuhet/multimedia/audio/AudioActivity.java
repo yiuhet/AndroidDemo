@@ -2,6 +2,7 @@ package com.yiuhet.multimedia.audio;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -10,7 +11,6 @@ import android.os.Handler;
 import android.widget.Button;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -27,10 +27,10 @@ import java.util.Arrays;
  * 音频学习：
  * 使用AudioRecord的界面
  */
-public class AudioActivity extends AppCompatActivity {
+public class AudioActivity extends Activity {
 
     private WavFileWriter mWavFileWriter;
-    private AudioRecordImpl mAudioRecord;
+    private AudioRecordHelper mAudioRecord;
     private MediaRecordImpl mMediaRecord;
     private AudioPlayer mAudioPlayer;
     private Button mOptBtn;
@@ -48,7 +48,7 @@ public class AudioActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_audio);
         mWavFileWriter = new WavFileWriter();
-        mAudioRecord = new AudioRecordImpl();
+        mAudioRecord = new AudioRecordHelper();
         mMediaRecord = new MediaRecordImpl();
         mAudioPlayer = new AudioPlayer();
         mOptBtn = findViewById(R.id.btn_start_record);
@@ -89,7 +89,7 @@ public class AudioActivity extends AppCompatActivity {
             return;
         }
         if (!mAudioRecord.isRecordStarted()) {
-            mAudioRecord.setOnAudioFrameRecordListener(new AudioRecordImpl.OnAudioFrameRecordListener() {
+            mAudioRecord.setOnAudioFrameRecordListener(new AudioRecordHelper.OnAudioFrameRecordListener() {
                 @Override
                 public void onAudioFrameRecord(byte[] audioData) {
                     mAudioPlayer.play(audioData, 0, audioData.length);
@@ -121,11 +121,11 @@ public class AudioActivity extends AppCompatActivity {
         }
         if (!mAudioRecord.isRecordStarted()) {
             try {
-                mWavFileWriter.openFile(DEFAULT_TEST_FILE, AudioRecordImpl.DEFAULT_SAMPLE_RATE, 2, 16);
+                mWavFileWriter.openFile(DEFAULT_TEST_FILE, AudioRecordHelper.DEFAULT_SAMPLE_RATE, 2, 16);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            mAudioRecord.setOnAudioFrameRecordListener(new AudioRecordImpl.OnAudioFrameRecordListener() {
+            mAudioRecord.setOnAudioFrameRecordListener(new AudioRecordHelper.OnAudioFrameRecordListener() {
                 @Override
                 public void onAudioFrameRecord(byte[] audioData) {
                     mWavFileWriter.writeData(audioData, 0, audioData.length);
