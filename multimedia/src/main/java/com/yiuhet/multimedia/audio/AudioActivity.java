@@ -8,6 +8,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -15,9 +16,12 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.yiuhet.multimedia.R;
+import com.yiuhet.multimedia.ThreadPoolUtils;
 import com.yiuhet.multimedia.audio.wav.WavFileReader;
 import com.yiuhet.multimedia.audio.wav.WavFileWriter;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -28,20 +32,27 @@ import java.util.Arrays;
  * 使用AudioRecord的界面
  */
 public class AudioActivity extends Activity {
+    private static final String TAG = "AudioActivity";
 
     private WavFileWriter mWavFileWriter;
     private AudioRecordHelper mAudioRecord;
-    private MediaRecordImpl mMediaRecord;
     private AudioPlayer mAudioPlayer;
+    private MediaRecordHelper mMediaRecord;
     private Button mOptBtn;
     private Button mOptBtn1;
     private Button mOptBtn2;
     private Button mOptBtn3;
+    private Button mOptBtnRecord1;
+    private Button mOptBtnRecord2;
+    private Button mOptBtnRecord3;
+    private Button mOptBtnRecord4;
     private String[] REQUIRED_PERMISSIONS = new String[]{Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
     private final int REQUEST_CODE_PERMISSIONS = 10;
 
 
     private static final String DEFAULT_TEST_FILE = Environment.getExternalStorageDirectory() + "/sounds/test.wav";
+
+    private String mFile = Environment.getExternalStorageDirectory().getPath() + "/sounds/result.pcm";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,16 +60,92 @@ public class AudioActivity extends Activity {
         setContentView(R.layout.activity_audio);
         mWavFileWriter = new WavFileWriter();
         mAudioRecord = new AudioRecordHelper();
-        mMediaRecord = new MediaRecordImpl();
+        mAudioRecord.setFileName(mFile);
+        mMediaRecord = new MediaRecordHelper();
         mAudioPlayer = new AudioPlayer();
         mOptBtn = findViewById(R.id.btn_start_record);
         mOptBtn1 = findViewById(R.id.btn_start_record_media);
         mOptBtn2 = findViewById(R.id.btn_start_record_save_wav);
         mOptBtn3 = findViewById(R.id.btn_start_record_play_wav);
+        mOptBtnRecord1 = findViewById(R.id.btn_start_record_1);
+        mOptBtnRecord2 = findViewById(R.id.btn_start_record_2);
+        mOptBtnRecord3 = findViewById(R.id.btn_start_record_3);
+        mOptBtnRecord4 = findViewById(R.id.btn_start_record_4);
         mOptBtn.setOnClickListener(v -> optRecord());
         mOptBtn1.setOnClickListener(v -> optRecord1());
         mOptBtn2.setOnClickListener(v -> startRecordAndSaveWav());
         mOptBtn3.setOnClickListener(v -> optWav());
+        mOptBtnRecord1.setOnClickListener(v -> startSaveRecord());
+        mOptBtnRecord2.setOnClickListener(v -> pauseRecord());
+        mOptBtnRecord3.setOnClickListener(v -> stopRecord());
+        mOptBtnRecord4.setOnClickListener(v -> playRecord());
+    }
+
+    /**
+     * 开始/继续录制音频，写入文件
+     */
+    private void startSaveRecord() {
+        if (!allPermissionsGranted()) {
+            ActivityCompat.requestPermissions(
+                    this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
+            return;
+        }
+        if (!mAudioRecord.isRecordStarted()) {
+            mAudioRecord.setSave(true);
+            mAudioRecord.startRecord();
+            mOptBtnRecord1.setText("录制中...");
+            mOptBtnRecord2.setText("暂停录制");
+        }
+
+    }
+
+    /**
+     * 暂停录制，写入文件
+     */
+    private void pauseRecord() {
+        mAudioRecord.pauseRecord();
+        mOptBtnRecord1.setText("继续录制");
+        mOptBtnRecord2.setText("已暂停");
+    }
+
+    /**
+     * 停止录制，写入文件
+     */
+    private void stopRecord() {
+        mAudioRecord.stopRecord();
+        mOptBtnRecord1.setText("开始录制");
+    }
+
+    /**
+     * 播放pcm文件
+     */
+    private void playRecord() {
+        mOptBtnRecord4.setText("播放中...");
+        ThreadPoolUtils.executeInCachePool(() -> {
+            try {
+                FileInputStream fis = new FileInputStream(mFile);
+                mAudioPlayer.startPlayer();
+                byte[] buffer = new byte[mAudioPlayer.getMinBufferSize()];
+                int len = 0;
+                while ((len = fis.read(buffer)) != -1) {
+                    Log.d(TAG, "play pcm file , len : " + len);
+                    mAudioPlayer.play(buffer, 0, len);
+                }
+                Log.d(TAG, "play done!");
+                mAudioPlayer.stopPlayer();
+                mOptBtnRecord4.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        mOptBtnRecord4.setText("播放音频");
+                    }
+                });
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
     }
 
     /**

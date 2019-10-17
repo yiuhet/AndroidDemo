@@ -3,6 +3,7 @@ package com.yiuhet.multimedia.audio;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.os.Environment;
 import android.util.Log;
 
 import java.io.BufferedInputStream;
@@ -14,7 +15,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Created by yiuhet on 2019/8/19.
@@ -46,11 +46,10 @@ public class AudioRecordHelper {
     //文件名
     private String mFileName;
 
+    private boolean isSave;
+
     //录音文件
     private List<String> mFilesNameList = new ArrayList<>();
-
-    //线程池
-    private ExecutorService mExecutorService;
 
 
     /**
@@ -83,6 +82,10 @@ public class AudioRecordHelper {
 
     public void setFileName(String fileName) {
         this.mFileName = fileName;
+    }
+
+    public void setSave(boolean save) {
+        isSave = save;
     }
 
     /**
@@ -127,24 +130,22 @@ public class AudioRecordHelper {
         }
 
         mAudioRecord.startRecording();
-        String currentFileName = mFileName;
-        if (mStatus == Status.STATUS_PAUSE) {
-            //假如是暂停录音 将文件名后面加个数字,防止重名文件内容被覆盖
-            currentFileName += mFilesNameList.size();
-        }
 
-        mFilesNameList.add(currentFileName);
 
-        final String finalFileName = currentFileName;
         //将录音状态设置成正在录音状态
         mStatus = Status.STATUS_START;
 
         mIsLoopExit = false;
-//        mAudioRecordThread = new Thread(new AudioCaptureRunnable());
-        mAudioRecordThread = new Thread(new AudioSaveRunnable(finalFileName));
+        if (isSave) {
+            String currentFileName = mFileName + "-" + mFilesNameList.size();
+            ;
+            mFilesNameList.add(currentFileName);
+            final String finalFileName = currentFileName;
+            mAudioRecordThread = new Thread(new AudioSaveRunnable(finalFileName));
+        } else {
+            mAudioRecordThread = new Thread(new AudioCaptureRunnable());
+        }
         mAudioRecordThread.start();
-
-
         mIsRecordStarted = true;
 
         Log.d(TAG, "Start audio record success !");
@@ -157,13 +158,14 @@ public class AudioRecordHelper {
      * 暂停录音
      */
     public void pauseRecord() {
-        Log.d("AudioRecorder", "===pauseRecord===");
+        Log.d(TAG, "===pauseRecord===");
         if (mStatus != Status.STATUS_START) {
             throw new IllegalStateException("没有在录音");
         } else {
             mAudioRecord.stop();
             mStatus = Status.STATUS_PAUSE;
         }
+        mIsRecordStarted = false;
     }
 
     /**
@@ -171,23 +173,24 @@ public class AudioRecordHelper {
      */
     public void stopRecord() {
 
-        if (!mIsRecordStarted || mAudioRecord == null) {
+        if (mAudioRecord == null) {
             return;
         }
 
         mIsLoopExit = true;
-        try {
-            mAudioRecordThread.interrupt();
-            mAudioRecordThread.join(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        if (mAudioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
-            mAudioRecord.stop();
-        }
-
+        mAudioRecord.stop();
+        mStatus = Status.STATUS_STOP;
         mAudioRecord.release();
+        if (isSave) {
+            List<File> tempFiles = new ArrayList<>();
+            for (String temp : mFilesNameList) {
+                File f = new File(temp);
+                tempFiles.add(f);
+            }
+            mergePcmFiles(new File(mFileName), tempFiles);
+            Log.d(TAG, "save file : " + mFileName);
+            isSave = false;
+        }
 
         mIsRecordStarted = false;
         mAudioFrameRecordListener = null;
@@ -217,7 +220,6 @@ public class AudioRecordHelper {
                     Log.d(TAG, "OK, Record " + ret + " bytes !");
                 }
 
-//                SystemClock.sleep(10);
             }
         }
     }
@@ -267,6 +269,12 @@ public class AudioRecordHelper {
                     }
                     Log.d(TAG, "OK, Record " + ret + " bytes !");
                 }
+            }
+            if (mStatus == Status.STATUS_PAUSE) {
+                Log.d(TAG, "OK, Record pause, save file : " + mFileName);
+            }
+            if (mStatus == Status.STATUS_STOP) {
+                Log.d(TAG, "OK, Record stop!");
             }
             try {
                 if (fos != null) {
