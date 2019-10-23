@@ -1,1 +1,1 @@
-include ':app', ':camerademo', ':widget', ':multimedia', ':base'
+include ':app', ':camerademo', ':widget', ':multimedia', ':base', ':mvpdemo'
